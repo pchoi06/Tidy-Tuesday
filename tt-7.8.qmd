@@ -11,30 +11,76 @@ color_ranks <- tuesdata$color_ranks
 users <- tuesdata$users
 ```
 
-# Filter Answers by Rank
 ```{r}
-purple <- answers |> 
+# Filter Answers by Rank
+purple <- answers %>% 
   filter(rank == 1)
-green <- answers |> 
+green <- answers %>% 
   filter(rank == 2)
-blue <- answers |> 
+blue <- answers %>% 
   filter(rank == 3)
-pink <- answers |> 
+pink <- answers %>% 
   filter(rank == 4)
-brown <- answers |> 
+brown <- answers %>% 
   filter(rank == 5)
+
+# Filter distinct and mutate
+distinct_purple <- purple %>%
+  distinct(hex) %>% 
+  mutate(category = "Purple")
+distinct_green <- green %>%
+  distinct(hex) %>% 
+  mutate(category = "Green")
+distinct_blue <- blue %>%
+  distinct(hex) %>% 
+  mutate(category = "Blue")
+distinct_pink <- pink %>%
+  distinct(hex) %>% 
+  mutate(category = "Pink")
+distinct_brown <- brown %>%
+  distinct(hex) %>% 
+  mutate(category = "Brown")
 ```
 
 ## Plot Gradients for filtered answers
-# Blue
+# Purple
 ```{r}
-distinct_blue <- blue %>%
-  distinct(hex)
+hues_purple <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_purple$hex))["h", ]
 
-hues <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_blue$hex))["h", ]
+distinct_purple <- distinct_purple %>%
+  mutate(hue = hues_purple) %>%
+  arrange(hue) %>%
+  mutate(idx = row_number())
+
+ggplot(distinct_purple, aes(x = idx, y = 1, fill = hex)) +
+  geom_tile(height = 0.5) +
+  scale_fill_identity() +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_void() +
+  labs(title = "Purple")
+
+# Green
+hues_green <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_green$hex))["h", ]
+
+distinct_green <- distinct_green %>%
+  mutate(hue = hues_green) %>%
+  arrange(hue) %>%
+  mutate(idx = row_number())
+
+ggplot(distinct_green, aes(x = idx, y = 1, fill = hex)) +
+  geom_tile(height = 0.5) +
+  scale_fill_identity() +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_void() +
+  labs(title = "Green")
+
+# Blue
+hues_blue <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_blue$hex))["h", ]
 
 distinct_blue <- distinct_blue %>%
-  mutate(hue = hues) %>%
+  mutate(hue = hues_blue) %>%
   arrange(hue) %>%
   mutate(idx = row_number())
 
@@ -43,18 +89,30 @@ ggplot(distinct_blue, aes(x = idx, y = 1, fill = hex)) +
   scale_fill_identity() +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
-  theme_void()
-```
+  theme_void() +
+  labs(title = "Blue")
+
+# Pink
+hues_pink <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_pink$hex))["h", ]
+
+distinct_pink <- distinct_pink %>%
+  mutate(hue = hues_pink) %>%
+  arrange(hue) %>%
+  mutate(idx = row_number())
+
+ggplot(distinct_pink, aes(x = idx, y = 1, fill = hex)) +
+  geom_tile(height = 0.5) +
+  scale_fill_identity() +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_void() +
+  labs(title = "Pink")
 
 # Brown
-```{r}
-distinct_brown <- brown %>%
-  distinct(hex)
-
-hues <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_brown$hex))["h", ]
+hues_brown <- grDevices::rgb2hsv(grDevices::col2rgb(distinct_brown$hex))["h", ]
 
 distinct_brown <- distinct_brown %>%
-  mutate(hue = hues) %>%
+  mutate(hue = hues_brown) %>%
   arrange(hue) %>%
   mutate(idx = row_number())
 
@@ -63,8 +121,45 @@ ggplot(distinct_brown, aes(x = idx, y = 1, fill = hex)) +
   scale_fill_identity() +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
-  theme_void()
+  theme_void() +
+  labs(title = "Brown")
 ```
 
 
+```{r}
+all_colors <- bind_rows(distinct_purple,
+                        distinct_green,
+                        distinct_blue,
+                        distinct_pink,
+                        distinct_brown)
+
+# compute hue, sort within each category, assign x‐index
+all_colors <- all_colors %>%
+  group_by(category) %>%
+  mutate(
+    hue = grDevices::rgb2hsv(grDevices::col2rgb(hex))["h", ],
+    idx = row_number()) %>%
+  arrange(category, hue) %>%
+  ungroup()
+
+all_colors2 <- all_colors %>%
+  group_by(category) %>%
+  arrange(grDevices::rgb2hsv(grDevices::col2rgb(hex))["h", ]) %>% 
+  mutate(idx = row_number()) %>% 
+  ungroup() %>%
+  # reorder so largest idx (longest band) is first level
+  mutate(category = fct_reorder(category, idx, .fun = max, .desc = FALSE))
+
+# plot each category as a horizontal gradient band
+ggplot(all_colors2, aes(x = idx, y = category, fill = hex)) +
+  geom_tile(height = 1) +
+  scale_fill_identity() +
+  scale_x_continuous(
+    name   = "Hue-sorted Position",
+    expand = c(0, 0)) +
+  scale_y_discrete(
+    name   = "Color Category",
+    expand = c(0, 0)) +
+  labs(title = "Color Bands")
+```
 
